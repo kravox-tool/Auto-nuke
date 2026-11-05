@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation plan for Auto Nuke Discord Python Bot Controller with custom storage permission, server image picker, server list selector, channel creation limits (50 channels), message spam limits (150 messages), and Python WebSocket bridge.",
+  "updatedAt": "2026-11-05T19:34:14.032508953Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

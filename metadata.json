@@ -1,0 +1,6 @@
+{
+  "name": "Auto Nuke",
+  "description": "Auto Nuke Terminal & Python Bot Control System",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
