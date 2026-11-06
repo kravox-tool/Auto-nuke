@@ -17,7 +17,7 @@
 
         <!-- Navigation Tabs -->
         <nav class="nav-tabs">
-            <button class="tab-btn active" data-tab="tab-config">1. TOKEN & FOTO</button>
+            <button class="tab-btn active" data-tab="tab-config">1. TOKEN & ID</button>
             <button class="tab-btn" data-tab="tab-servers">2. SERVIDORES</button>
             <button class="tab-btn" data-tab="tab-params">3. PARÁMETROS</button>
             <button class="tab-btn" data-tab="tab-exec">4. EJECUTAR</button>
@@ -25,10 +25,10 @@
 
         <!-- Main Content Area -->
         <main class="content">
-            <!-- Tab 1: Token & Server Icon -->
+            <!-- Tab 1: Token & Target ID -->
             <section id="tab-config" class="tab-content active">
                 <div class="terminal-card">
-                    <h2>[ CREDENCIALES Y FOTO DE SERVIDOR ]</h2>
+                    <h2>[ CREDENCIALES Y OBJETIVO ]</h2>
                     
                     <div class="form-group">
                         <label for="bot-token">→ Coloca el token del bot de Discord:</label>
@@ -39,7 +39,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label>→ Seleccionar nueva foto del servidor:</label>
+                        <label for="target-guild-id">→ ID del Servidor Objetivo (Target Guild ID):</label>
+                        <input type="text" id="target-guild-id" placeholder="123456789012345678">
+                    </div>
+
+                    <div class="form-group">
+                        <label>→ Seleccionar nueva foto del servidor (Opcional):</label>
                         <div class="file-picker-box">
                             <button id="btn-pick-image" class="btn-terminal primary">📂 ELEGIR FOTO (ALMACENAMIENTO)</button>
                             <span id="selected-file-name" class="file-name-display">Ninguna imagen seleccionada</span>
@@ -101,19 +106,19 @@
             <!-- Tab 4: Execute -->
             <section id="tab-exec" class="tab-content">
                 <div class="terminal-card">
-                    <h2>[ CONSOLA DE EJECUCIÓN PYTHON ]</h2>
+                    <h2>[ CONSOLA DE EJECUCIÓN PYTHON BOT ]</h2>
                     <div class="execution-summary" id="exec-summary">
-                        <p><strong>Servidor Seleccionado:</strong> <span id="sum-server">Ninguno</span></p>
+                        <p><strong>Servidor Objetivo ID:</strong> <span id="sum-server">No definido</span></p>
                         <p><strong>Canales a Crear:</strong> <span id="sum-channels">50</span> x "<span id="sum-chan-name">nuked-by-autonuke</span>"</p>
                         <p><strong>Mensajes por Canal:</strong> <span id="sum-msgs">150</span></p>
                     </div>
 
-                    <button id="btn-execute-nuke" class="btn-terminal danger big">⚡ EJECUTAR AUTO NUKE (INICIAR)</button>
+                    <button id="btn-execute-nuke" class="btn-terminal danger big">⚡ INICIAR BOT PYTHON (AUTO NUKE)</button>
                     
                     <div class="terminal-output" id="terminal-output">
-                        <p class="log-system">[SYS] Sistema listo para la ejecución.</p>
-                        <p class="log-system">[SYS] Permisos de almacenamiento y WebSocket Python configurados.</p>
-                        <p class="log-info">Presiona EJECUTAR para iniciar el proceso...</p>
+                        <p class="log-system">[SYS] Sistema listo para la ejecución con Python y Firebase.</p>
+                        <p class="log-system">[SYS] El bot borrará todos los canales existentes y creará los nuevos canales.</p>
+                        <p class="log-info">Presiona INICIAR BOT PYTHON para comenzar...</p>
                     </div>
                 </div>
             </section>
@@ -121,7 +126,7 @@
 
         <!-- Status Bar -->
         <footer class="footer-bar">
-            <span>MODO: <span class="highlight">PYTHON BOT 120 FPS</span></span>
+            <span>MODO: <span class="highlight">PYTHON DISCORD.PY</span></span>
             <span id="clock-display">00:00:00</span>
         </footer>
     </div>
