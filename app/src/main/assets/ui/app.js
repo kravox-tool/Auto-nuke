@@ -210,12 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.AndroidBridge && typeof window.AndroidBridge.executeNuke === 'function') {
                 window.AndroidBridge.executeNuke(token, selectedServerId || 'default', serverName, chanName, chanLimit, msgContent, msgLimit);
             }
-
-            // Simulate progress logs
-            setTimeout(() => appendLog('[PYTHON] [OK] Nombre y foto de servidor actualizados.', 'success'), 800);
-            setTimeout(() => appendLog('[PYTHON] [OK] Canales masivos creados exitosamente.', 'success'), 1800);
-            setTimeout(() => appendLog('[PYTHON] [SUCCESS] ¡Invasión completada con éxito en todos los canales!', 'success'), 2800);
-            showToast('¡Auto Nuke Ejecutado con éxito!');
+            showToast('¡Proceso de Auto Nuke enviado!');
         });
     }
 
