@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         output.appendChild(p);
         output.scrollTop = output.scrollHeight;
     }
+    window.appendLog = appendLog;
 
     // Step 1 -> Step 2
     const nextStep1Btn = document.getElementById('btn-next-step-1');

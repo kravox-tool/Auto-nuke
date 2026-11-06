@@ -42,13 +42,14 @@ body {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: calc(100% - 18px);
     width: 100%;
     max-width: 600px;
-    margin: 0 auto;
+    margin: 18px auto 0 auto;
     background: #050000;
     border-left: var(--border-red);
     border-right: var(--border-red);
+    border-top: var(--border-red);
 }
 
 /* Header */
