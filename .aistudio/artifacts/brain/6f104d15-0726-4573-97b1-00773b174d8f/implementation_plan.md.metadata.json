@@ -1,6 +1,0 @@
-{
-  "summary":  "Implementation plan for fixing server icon Base64 upload, removing numbers from channel creation, clearing default pre-filled text in inputs, and cleaning up UI text.",
-  "updatedAt":  "2026-11-07T13:38:09.255259296Z",
-  "requestFeedback":  true,
-  "userFacing":  true
-}
