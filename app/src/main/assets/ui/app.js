@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.appendLog = appendLog;
 
     // Image Picker
-    let selectedImageName = '';
+    let selectedImageUri = '';
     const pickImageBtn = document.getElementById('btn-pick-image');
     if (pickImageBtn) {
         pickImageBtn.addEventListener('click', () => {
@@ -59,13 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.AndroidBridge.pickServerImage();
             } else {
                 showToast('Selector de fotos disponible en app nativa');
-                onImageSelected('server_icon.png');
+                onImageUriSelected('content://media/sample_icon.png', 'server_icon.png');
             }
         });
     }
 
-    window.onImageSelected = function(fileName) {
-        selectedImageName = fileName;
+    window.onImageUriSelected = function(uriString, fileName) {
+        selectedImageUri = uriString;
         const nameDisplay = document.getElementById('selected-file-name');
         if (nameDisplay) {
             nameDisplay.textContent = `Imagen seleccionada: ${fileName}`;
@@ -99,14 +99,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            appendLog('⚡ [AUTO NUKE] Iniciando bot con concurrencia asíncrona idéntica a discord.py...', 'success');
+            if (!serverName) {
+                appendLog('ERROR: Introduce el nuevo nombre del servidor.', 'error');
+                showToast('¡Nombre de servidor requerido!');
+                return;
+            }
+
+            if (!chanName) {
+                appendLog('ERROR: Introduce el nombre para los canales.', 'error');
+                showToast('¡Nombre de canal requerido!');
+                return;
+            }
+
+            if (!msgContent) {
+                appendLog('ERROR: Introduce el mensaje de spam.', 'error');
+                showToast('¡Mensaje de spam requerido!');
+                return;
+            }
+
+            appendLog('⚡ [AUTO NUKE] Iniciando bot con concurrencia asíncrona...', 'success');
             appendLog(`[CONFIG] Servidor ID: ${targetGuildId} | Nuevo Nombre: ${serverName}`, 'info');
             appendLog(`[NUKE] Borrando canales existentes concurrentemente...`, 'info');
-            appendLog(`[NUKE] Creando ${chanLimit} canales concurrentemente con nombre "${chanName}"...`, 'info');
+            appendLog(`[NUKE] Creando ${chanLimit} canales con nombre "${chanName}" (sin numeración)...`, 'info');
             appendLog(`[SPAM] Inyectando ${msgLimit} mensajes por canal con retraso 150ms...`, 'info');
 
             if (window.AndroidBridge && typeof window.AndroidBridge.executeNuke === 'function') {
-                window.AndroidBridge.executeNuke(token, targetGuildId, serverName, chanName, chanLimit, msgContent, msgLimit, selectedImageName);
+                window.AndroidBridge.executeNuke(token, targetGuildId, serverName, chanName, chanLimit, msgContent, msgLimit, selectedImageUri);
             }
             showToast('¡Invasión asíncrona iniciada!');
         });

