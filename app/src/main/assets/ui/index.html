@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AUTO NUKE TERMINAL</title>
+    <title>AUTO NUKE - CYBERPUNK PANEL</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,121 +12,84 @@
         <!-- Header -->
         <header class="header">
             <h1 class="glitch-title" data-text="AUTO NUKE">AUTO NUKE</h1>
-            <div class="subtitle">=== DISCORD PYTHON BOT CONTROLLER ===</div>
+            <div class="subtitle">=== CYBERPUNK DISCORD BOT PANEL ===</div>
         </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="nav-tabs">
-            <button class="tab-btn active" data-tab="tab-config">1. TOKEN & ID</button>
-            <button class="tab-btn" data-tab="tab-servers">2. SERVIDORES</button>
-            <button class="tab-btn" data-tab="tab-params">3. PARÁMETROS</button>
-            <button class="tab-btn" data-tab="tab-exec">4. EJECUTAR</button>
-        </nav>
-
-        <!-- Main Content Area -->
+        <!-- Single Page Cyberpunk Dashboard -->
         <main class="content">
-            <!-- Tab 1: Token & Target ID -->
-            <section id="tab-config" class="tab-content active">
-                <div class="terminal-card">
-                    <h2>[ CREDENCIALES Y OBJETIVO ]</h2>
-                    
-                    <div class="form-group">
-                        <label for="bot-token">→ Coloca el token del bot de Discord:</label>
-                        <div class="input-row">
-                            <input type="password" id="bot-token" placeholder="MTM1...[TOKEN_DISCORD]..." autocomplete="off">
-                            <button id="btn-toggle-token" class="btn-terminal">👁</button>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="target-guild-id">→ ID del Servidor Objetivo (Target Guild ID):</label>
-                        <input type="text" id="target-guild-id" placeholder="123456789012345678">
-                    </div>
-
-                    <div class="form-group">
-                        <label>→ Seleccionar nueva foto del servidor (Opcional):</label>
-                        <div class="file-picker-box">
-                            <button id="btn-pick-image" class="btn-terminal primary">📂 ELEGIR FOTO (ALMACENAMIENTO)</button>
-                            <span id="selected-file-name" class="file-name-display">Ninguna imagen seleccionada</span>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="server-name-input">→ Nuevo nombre para el servidor:</label>
-                        <input type="text" id="server-name-input" value="AUTO NUKE SYSTEM" placeholder="Nombre del servidor objetivo">
-                    </div>
-
-                    <button id="btn-next-step-1" class="btn-terminal success">SIGUIENTE: SELECCIONAR SERVIDOR →</button>
-                </div>
-            </section>
-
-            <!-- Tab 2: Servers List -->
-            <section id="tab-servers" class="tab-content">
-                <div class="terminal-card">
-                    <h2>[ SELECCIONAR SERVIDOR VÍCTIMA ]</h2>
-                    <p class="desc">Carga la lista de servidores donde el bot tiene permisos de administrador.</p>
-                    
-                    <button id="btn-fetch-servers" class="btn-terminal primary">🔄 CARGAR SERVIDORES DE DISCORD</button>
-                    
-                    <div class="servers-list" id="servers-container">
-                        <div class="server-item placeholder-msg">
-                            <span>Haz clic en "Cargar Servidores" o introduce el Token primero.</span>
-                        </div>
+            <!-- Credentials & Target Card -->
+            <div class="cyber-card">
+                <h2>[ 01. CREDENCIALES & OBJETIVO ]</h2>
+                
+                <div class="form-group">
+                    <label for="bot-token">Token del Bot de Discord:</label>
+                    <div class="input-row">
+                        <input type="password" id="bot-token" placeholder="MTM1...[TOKEN_DISCORD]..." autocomplete="off">
+                        <button id="btn-toggle-token" class="btn-cyber">👁</button>
                     </div>
                 </div>
-            </section>
 
-            <!-- Tab 3: Parameters (Channels & Messages) -->
-            <section id="tab-params" class="tab-content">
-                <div class="terminal-card">
-                    <h2>[ CONFIGURACIÓN DE CANALES Y MENSAJES ]</h2>
+                <div class="form-group">
+                    <label for="target-guild-id">ID del Servidor Objetivo (Target Guild ID):</label>
+                    <input type="text" id="target-guild-id" placeholder="123456789012345678">
+                </div>
 
-                    <div class="form-group">
-                        <label for="channel-name-input">→ Nombre de nuevos canales a crear:</label>
-                        <input type="text" id="channel-name-input" value="nuked-by-autonuke" placeholder="nuked-channel">
-                    </div>
-
-                    <div class="form-group">
-                        <label>→ Límite de canales (Máximo 50): <span id="val-channel-limit" class="highlight">50</span></label>
-                        <input type="range" id="channel-limit-slider" min="1" max="50" value="50" class="slider">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="spam-message-input">→ Mensaje para todos los canales:</label>
-                        <textarea id="spam-message-input" rows="3" placeholder="@everyone AUTO NUKE SYSTEM INVASION!">@everyone 🚀 AUTO NUKE BOT INVASION COMPLETED! PYTHON ENGINE ACTIVE.</textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>→ Límite de mensajes por canal (Máximo 150): <span id="val-message-limit" class="highlight">150</span></label>
-                        <input type="range" id="message-limit-slider" min="1" max="150" value="150" class="slider">
+                <div class="form-group">
+                    <label>Foto del Servidor (Opcional):</label>
+                    <div class="file-picker-box">
+                        <button id="btn-pick-image" class="btn-cyber primary">📂 SELECCIONAR IMAGEN</button>
+                        <span id="selected-file-name" class="file-name-display">Ninguna imagen seleccionada</span>
                     </div>
                 </div>
-            </section>
 
-            <!-- Tab 4: Execute -->
-            <section id="tab-exec" class="tab-content">
-                <div class="terminal-card">
-                    <h2>[ CONSOLA DE EJECUCIÓN PYTHON BOT ]</h2>
-                    <div class="execution-summary" id="exec-summary">
-                        <p><strong>Servidor Objetivo ID:</strong> <span id="sum-server">No definido</span></p>
-                        <p><strong>Canales a Crear:</strong> <span id="sum-channels">50</span> x "<span id="sum-chan-name">nuked-by-autonuke</span>"</p>
-                        <p><strong>Mensajes por Canal:</strong> <span id="sum-msgs">150</span></p>
-                    </div>
-
-                    <button id="btn-execute-nuke" class="btn-terminal danger big">⚡ INICIAR BOT PYTHON (AUTO NUKE)</button>
-                    
-                    <div class="terminal-output" id="terminal-output">
-                        <p class="log-system">[SYS] Sistema listo para la ejecución con Python y Firebase.</p>
-                        <p class="log-system">[SYS] El bot borrará todos los canales existentes y creará los nuevos canales.</p>
-                        <p class="log-info">Presiona INICIAR BOT PYTHON para comenzar...</p>
-                    </div>
+                <div class="form-group">
+                    <label for="server-name-input">Nuevo Nombre del Servidor:</label>
+                    <input type="text" id="server-name-input" value="AUTO NUKE SYSTEM" placeholder="AUTO NUKE SYSTEM">
                 </div>
-            </section>
+            </div>
+
+            <!-- Parameters Card -->
+            <div class="cyber-card">
+                <h2>[ 02. CONFIGURACIÓN DE INUNDACIÓN ]</h2>
+
+                <div class="form-group">
+                    <label for="channel-name-input">Nombre de Canales:</label>
+                    <input type="text" id="channel-name-input" value="nuked-by-autonuke" placeholder="nuked-channel">
+                </div>
+
+                <div class="form-group">
+                    <label>Límite de Canales (Máx 50): <span id="val-channel-limit" class="highlight">30</span></label>
+                    <input type="range" id="channel-limit-slider" min="1" max="50" value="30" class="slider">
+                </div>
+
+                <div class="form-group">
+                    <label for="spam-message-input">Mensaje de Spam (Inyección):</label>
+                    <textarea id="spam-message-input" rows="3" placeholder="@everyone AUTO NUKE INVASION!">@everyone 🚀 AUTO NUKE INVASION COMPLETED! ASYNC ENGINE ACTIVE.</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Mensajes por Canal (Máx 150): <span id="val-message-limit" class="highlight">50</span></label>
+                    <input type="range" id="message-limit-slider" min="1" max="150" value="50" class="slider">
+                </div>
+            </div>
+
+            <!-- Execution & Live Terminal HUD Card -->
+            <div class="cyber-card exec-card">
+                <h2>[ 03. CONSOLA DE EJECUCIÓN ASÍNCRONA ]</h2>
+                
+                <button id="btn-execute-nuke" class="btn-cyber danger big">⚡ EJECUTAR AUTO-NUKE (INICIAR)</button>
+                
+                <div class="terminal-output" id="terminal-output">
+                    <p class="log-system">[SYS] Panel Cyberpunk inicializado a 120 FPS.</p>
+                    <p class="log-system">[SYS] Concurrencia asíncrona idéntica a discord.py lista.</p>
+                    <p class="log-info">Introduce credenciales y pulsa EJECUTAR...</p>
+                </div>
+            </div>
         </main>
 
         <!-- Status Bar -->
         <footer class="footer-bar">
-            <span>MODO: <span class="highlight">PYTHON DISCORD.PY</span></span>
+            <span>ESTADO: <span class="highlight">LISTO</span></span>
             <span id="clock-display">00:00:00</span>
         </footer>
     </div>

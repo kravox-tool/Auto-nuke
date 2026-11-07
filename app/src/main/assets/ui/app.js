@@ -1,4 +1,4 @@
-/* AUTO NUKE - High Performance App Logic */
+/* AUTO NUKE - Cyberpunk HUD App Logic */
 
 document.addEventListener('DOMContentLoaded', () => {
     // Instant startup clock
@@ -8,26 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const clockEl = document.getElementById('clock-display');
         if (clockEl) clockEl.textContent = timeStr;
     }, 50);
-
-    // Tab Navigation
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    function switchTab(targetId) {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
-
-        const btn = document.querySelector(`[data-tab="${targetId}"]`);
-        const targetEl = document.getElementById(targetId);
-        if (btn) btn.classList.add('active');
-        if (targetEl) targetEl.classList.add('active');
-    }
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            switchTab(btn.getAttribute('data-tab'));
-        });
-    });
 
     // Token Visibility Toggle
     const tokenInput = document.getElementById('bot-token');
@@ -45,8 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (channelLimitSlider && valChannelLimit) {
         channelLimitSlider.addEventListener('input', (e) => {
             valChannelLimit.textContent = e.target.value;
-            const sumChannels = document.getElementById('sum-channels');
-            if (sumChannels) sumChannels.textContent = e.target.value;
         });
     }
 
@@ -55,25 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (messageLimitSlider && valMessageLimit) {
         messageLimitSlider.addEventListener('input', (e) => {
             valMessageLimit.textContent = e.target.value;
-            const sumMsgs = document.getElementById('sum-msgs');
-            if (sumMsgs) sumMsgs.textContent = e.target.value;
-        });
-    }
-
-    const channelNameInput = document.getElementById('channel-name-input');
-    if (channelNameInput) {
-        channelNameInput.addEventListener('input', (e) => {
-            const sumChanName = document.getElementById('sum-chan-name');
-            if (sumChanName) sumChanName.textContent = e.target.value || 'nuked';
-        });
-    }
-
-    // Target Guild ID sync
-    const targetGuildInput = document.getElementById('target-guild-id');
-    if (targetGuildInput) {
-        targetGuildInput.addEventListener('input', (e) => {
-            const sumServer = document.getElementById('sum-server');
-            if (sumServer) sumServer.textContent = e.target.value || 'No definido';
         });
     }
 
@@ -90,27 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.appendLog = appendLog;
 
-    // Step 1 -> Step 2
-    const nextStep1Btn = document.getElementById('btn-next-step-1');
-    if (nextStep1Btn) {
-        nextStep1Btn.addEventListener('click', () => {
-            const token = tokenInput ? tokenInput.value.trim() : '';
-            if (!token) {
-                appendLog('ERROR: Debes introducir el token del bot de Discord.', 'error');
-                showToast('¡Token requerido!');
-                return;
-            }
-            appendLog(`[CONFIG] Token guardado y verificado.`, 'success');
-            switchTab('tab-servers');
-        });
-    }
-
     // Image Picker
     let selectedImageName = '';
     const pickImageBtn = document.getElementById('btn-pick-image');
     if (pickImageBtn) {
         pickImageBtn.addEventListener('click', () => {
-            appendLog('[SYS] Solicitando permisos de almacenamiento y abriendo selector...', 'info');
+            appendLog('[SYS] Abriendo selector de almacenamiento Android...', 'info');
             if (window.AndroidBridge && typeof window.AndroidBridge.pickServerImage === 'function') {
                 window.AndroidBridge.pickServerImage();
             } else {
@@ -125,70 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const nameDisplay = document.getElementById('selected-file-name');
         if (nameDisplay) {
             nameDisplay.textContent = `Imagen seleccionada: ${fileName}`;
-            nameDisplay.style.color = '#00ff00';
+            nameDisplay.style.color = '#00ff66';
         }
         appendLog(`[STORAGE] Imagen de servidor cargada: ${fileName}`, 'success');
         showToast('Foto de servidor seleccionada');
-    };
-
-    // Fetch Servers List
-    const fetchServersBtn = document.getElementById('btn-fetch-servers');
-    if (fetchServersBtn) {
-        fetchServersBtn.addEventListener('click', () => {
-            const token = tokenInput ? tokenInput.value.trim() : '';
-            if (!token) {
-                appendLog('ERROR: Introduce el token en la pestaña 1 para listar servidores.', 'error');
-                showToast('Token requerido');
-                switchTab('tab-config');
-                return;
-            }
-
-            appendLog('[DISCORD API] Conectando con API de Discord para listar servidores...', 'info');
-            if (window.AndroidBridge && typeof window.AndroidBridge.fetchGuilds === 'function') {
-                window.AndroidBridge.fetchGuilds(token);
-            }
-        });
-    }
-
-    window.renderServers = function(serversJsonString) {
-        let servers = [];
-        try {
-            servers = typeof serversJsonString === 'string' ? JSON.parse(serversJsonString) : serversJsonString;
-        } catch (e) {
-            servers = [];
-        }
-
-        const container = document.getElementById('servers-container');
-        if (!container) return;
-        container.innerHTML = '';
-
-        if (servers.length === 0) {
-            container.innerHTML = '<div class="server-item placeholder-msg"><span>No se encontraron servidores o token incorrecto.</span></div>';
-            return;
-        }
-
-        servers.forEach(srv => {
-            const div = document.createElement('div');
-            div.className = 'server-item';
-            div.innerHTML = `<span>${srv.name} (ID: ${srv.id})</span><span class="badge">SELECCIONAR</span>`;
-            div.addEventListener('click', () => {
-                document.querySelectorAll('.server-item').forEach(i => i.classList.remove('selected'));
-                div.classList.add('selected');
-                
-                const targetGuildInput = document.getElementById('target-guild-id');
-                if (targetGuildInput) {
-                    targetGuildInput.value = srv.id;
-                }
-                const sumServer = document.getElementById('sum-server');
-                if (sumServer) sumServer.textContent = `${srv.name} (${srv.id})`;
-
-                appendLog(`[SERVER] Servidor objetivo seleccionado: ${srv.name} (ID: ${srv.id})`, 'success');
-                showToast(`Servidor seleccionado: ${srv.name}`);
-                switchTab('tab-params');
-            });
-            container.appendChild(div);
-        });
-        appendLog(`[DISCORD API] Se encontraron ${servers.length} servidores con privilegios de administrador.`, 'success');
     };
 
     // Execute Nuke Button
@@ -196,36 +80,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (executeNukeBtn) {
         executeNukeBtn.addEventListener('click', () => {
             const token = tokenInput ? tokenInput.value.trim() : '';
-            const targetGuildId = targetGuildInput ? targetGuildInput.value.trim() : '';
-            const serverName = document.getElementById('server-name-input').value;
-            const chanName = channelNameInput ? channelNameInput.value : 'nuked';
-            const chanLimit = channelLimitSlider ? channelLimitSlider.value : 50;
-            const msgContent = document.getElementById('spam-message-input').value;
-            const msgLimit = messageLimitSlider ? messageLimitSlider.value : 150;
+            const targetGuildId = document.getElementById('target-guild-id').value.trim();
+            const serverName = document.getElementById('server-name-input').value.trim();
+            const chanName = document.getElementById('channel-name-input').value.trim();
+            const chanLimit = channelLimitSlider ? channelLimitSlider.value : 30;
+            const msgContent = document.getElementById('spam-message-input').value.trim();
+            const msgLimit = messageLimitSlider ? messageLimitSlider.value : 50;
 
             if (!token) {
-                appendLog('ERROR CRÍTICO: Falta el token de Discord.', 'error');
-                showToast('Falta el Token');
-                switchTab('tab-config');
+                appendLog('ERROR: El token del bot no puede estar vacío.', 'error');
+                showToast('¡Token requerido!');
                 return;
             }
 
             if (!targetGuildId) {
-                appendLog('ERROR CRÍTICO: Falta la ID del Servidor Objetivo.', 'error');
-                showToast('Falta ID de Servidor');
-                switchTab('tab-config');
+                appendLog('ERROR: Introduce la ID del servidor objetivo (Target Guild ID).', 'error');
+                showToast('¡ID de Servidor requerida!');
                 return;
             }
 
-            appendLog('⚡ [AUTO NUKE] Iniciando bot Python discord.py...', 'success');
+            appendLog('⚡ [AUTO NUKE] Iniciando bot con concurrencia asíncrona idéntica a discord.py...', 'success');
             appendLog(`[CONFIG] Servidor ID: ${targetGuildId} | Nuevo Nombre: ${serverName}`, 'info');
-            appendLog(`[NUKE] Borrando canales existentes y creando ${chanLimit} canales con nombre "${chanName}"...`, 'info');
-            appendLog(`[SPAM] Enviando ${msgLimit} mensajes por canal...`, 'info');
+            appendLog(`[NUKE] Borrando canales existentes concurrentemente...`, 'info');
+            appendLog(`[NUKE] Creando ${chanLimit} canales concurrentemente con nombre "${chanName}"...`, 'info');
+            appendLog(`[SPAM] Inyectando ${msgLimit} mensajes por canal con retraso 150ms...`, 'info');
 
             if (window.AndroidBridge && typeof window.AndroidBridge.executeNuke === 'function') {
                 window.AndroidBridge.executeNuke(token, targetGuildId, serverName, chanName, chanLimit, msgContent, msgLimit, selectedImageName);
             }
-            showToast('¡Bot Python iniciado!');
+            showToast('¡Invasión asíncrona iniciada!');
         });
     }
 
@@ -239,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!toast) {
             toast = document.createElement('div');
             toast.id = 'native-toast';
-            toast.style.cssText = 'position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#ff0000;color:#000;padding:8px 16px;font-family:monospace;font-size:12px;font-weight:bold;z-index:9999;border:1px solid #fff;box-shadow:0 0 10px #ff0000;';
+            toast.style.cssText = 'position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#ff003c;color:#000;padding:8px 16px;font-family:monospace;font-size:12px;font-weight:bold;z-index:9999;border:1px solid #fff;box-shadow:0 0 10px #ff003c;';
             document.body.appendChild(toast);
         }
         toast.textContent = message;

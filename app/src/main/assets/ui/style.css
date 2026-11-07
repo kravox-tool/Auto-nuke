@@ -1,12 +1,13 @@
-/* AUTO NUKE - High Performance Retro Hacker CSS */
+/* AUTO NUKE - Modern Cyberpunk HUD Dashboard CSS */
 :root {
-    --bg-color: #000000;
-    --primary-red: #ff0000;
-    --dark-red: #8b0000;
-    --bright-red: #ff3333;
-    --dim-red: #550000;
-    --text-glow: 0 0 8px rgba(255, 0, 0, 0.7);
-    --border-red: 1px solid #ff0000;
+    --bg-color: #030000;
+    --primary-red: #ff003c;
+    --dark-red: #400010;
+    --bright-red: #ff3366;
+    --dim-red: #200005;
+    --glass-bg: rgba(10, 0, 2, 0.85);
+    --text-glow: 0 0 10px rgba(255, 0, 60, 0.8);
+    --border-red: 1px solid #ff003c;
     --font-mono: 'Courier New', Courier, monospace;
 }
 
@@ -33,7 +34,7 @@ body {
 .crt-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 60, 0.04), rgba(0, 0, 0, 0.01), rgba(255, 0, 60, 0.04));
     background-size: 100% 4px, 6px 100%;
     pointer-events: none;
     z-index: 999;
@@ -42,28 +43,28 @@ body {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 18px);
+    height: calc(100% - 16px);
     width: 100%;
     max-width: 600px;
-    margin: 18px auto 0 auto;
-    background: #050000;
-    border-left: var(--border-red);
-    border-right: var(--border-red);
-    border-top: var(--border-red);
+    margin: 16px auto 0 auto;
+    background: var(--glass-bg);
+    border: var(--border-red);
+    box-shadow: 0 0 20px rgba(255, 0, 60, 0.2);
+    border-radius: 4px;
 }
 
 /* Header */
 .header {
-    padding: 10px 16px;
+    padding: 12px 16px;
     border-bottom: var(--border-red);
-    background: #0a0000;
+    background: #080002;
     text-align: center;
 }
 
 .glitch-title {
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 900;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     color: var(--bright-red);
     text-shadow: var(--text-glow);
 }
@@ -71,94 +72,43 @@ body {
 .subtitle {
     font-size: 10px;
     color: var(--primary-red);
-    margin-top: 2px;
-    opacity: 0.8;
-}
-
-/* Navigation Tabs */
-.nav-tabs {
-    display: flex;
-    background: #020000;
-    border-bottom: var(--border-red);
-    overflow-x: auto;
-}
-
-.tab-btn {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--primary-red);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: bold;
-    padding: 10px 4px;
-    cursor: pointer;
-    border-right: 1px solid var(--dim-red);
-    white-space: nowrap;
-    transition: background 0.1s ease, color 0.1s ease;
-}
-
-.tab-btn:last-child {
-    border-right: none;
-}
-
-.tab-btn.active {
-    background: var(--dark-red);
-    color: #ffffff;
-    text-shadow: var(--text-glow);
+    margin-top: 3px;
+    opacity: 0.85;
+    letter-spacing: 1px;
 }
 
 /* Content Area */
 .content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 14px;
+    padding: 16px;
     position: relative;
 }
 
-.tab-content {
-    display: none;
-    animation: fadeIn 0.15s ease-out;
+/* Cyber Cards */
+.cyber-card {
+    background: #050001;
+    border: 1px solid var(--primary-red);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 0 12px rgba(255, 0, 60, 0.08);
+    border-radius: 2px;
 }
 
-.tab-content.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Terminal Cards */
-.terminal-card {
-    background: #080000;
-    border: var(--border-red);
-    padding: 14px;
-    margin-bottom: 14px;
-    box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.1);
-}
-
-.terminal-card h2 {
+.cyber-card h2 {
     font-size: 13px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     color: var(--bright-red);
     border-bottom: 1px dashed var(--dark-red);
     padding-bottom: 6px;
     letter-spacing: 1px;
 }
 
-.desc {
-    font-size: 11px;
-    color: #cc6666;
-    margin-bottom: 12px;
-    line-height: 1.4;
-}
-
 /* Forms & Inputs */
 .form-group {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .form-group label {
@@ -166,6 +116,7 @@ body {
     font-size: 11px;
     margin-bottom: 6px;
     color: var(--bright-red);
+    font-weight: bold;
 }
 
 .input-row {
@@ -177,7 +128,7 @@ input[type="text"],
 input[type="password"],
 textarea {
     width: 100%;
-    background: #000000;
+    background: #010000;
     border: 1px solid var(--primary-red);
     color: var(--bright-red);
     padding: 10px 12px;
@@ -205,7 +156,7 @@ input:focus, textarea:focus {
 
 .file-name-display {
     font-size: 10px;
-    color: #884444;
+    color: #884455;
     word-break: break-all;
 }
 
@@ -213,14 +164,14 @@ input:focus, textarea:focus {
 .slider {
     width: 100%;
     accent-color: var(--primary-red);
-    background: #200000;
+    background: #25000a;
     height: 6px;
     outline: none;
 }
 
 /* Buttons */
-.btn-terminal {
-    background: #150000;
+.btn-cyber {
+    background: #150004;
     border: 1px solid var(--primary-red);
     color: var(--primary-red);
     font-family: var(--font-mono);
@@ -231,89 +182,31 @@ input:focus, textarea:focus {
     text-transform: uppercase;
     transition: all 0.1s ease;
     width: 100%;
-    margin-top: 6px;
     text-align: center;
 }
 
-.btn-terminal:active {
+.btn-cyber:active {
     background: var(--primary-red);
     color: #000000;
 }
 
-.btn-terminal.primary {
+.btn-cyber.primary {
     background: var(--dark-red);
     color: #ffffff;
 }
 
-.btn-terminal.success {
-    border-color: #00ff00;
-    color: #00ff00;
-    background: #002200;
-}
-
-.btn-terminal.success:active {
-    background: #00ff00;
-    color: #000000;
-}
-
-.btn-terminal.danger {
+.btn-cyber.danger {
     border-color: var(--bright-red);
     color: #ffffff;
     background: var(--dark-red);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
 }
 
-.btn-terminal.big {
-    padding: 14px;
-    font-size: 13px;
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-}
-
-/* Servers List */
-.servers-list {
-    margin-top: 10px;
-    max-height: 240px;
-    overflow-y: auto;
-}
-
-.server-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #020000;
-    border: 1px solid var(--dim-red);
-    padding: 10px 12px;
-    margin-bottom: 6px;
-    font-size: 11px;
-    cursor: pointer;
-    transition: background 0.1s ease;
-}
-
-.server-item:hover, .server-item.selected {
-    background: var(--dark-red);
-    border-color: var(--bright-red);
-    color: #ffffff;
-}
-
-.placeholder-msg {
-    color: #663333;
-    text-align: center;
-    justify-content: center;
-    cursor: default;
-}
-
-/* Execution Summary */
-.execution-summary {
-    background: #020000;
-    border: 1px solid var(--dim-red);
-    padding: 10px;
-    font-size: 11px;
-    margin-bottom: 12px;
-    line-height: 1.5;
-}
-
-.execution-summary span {
-    color: var(--bright-red);
+.btn-cyber.big {
+    padding: 16px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
 }
 
 /* Terminal Logs Output */
@@ -321,7 +214,7 @@ input:focus, textarea:focus {
     background: #000000;
     border: 1px solid var(--dim-red);
     padding: 10px;
-    height: 180px;
+    height: 200px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     font-size: 11px;
@@ -329,19 +222,19 @@ input:focus, textarea:focus {
 }
 
 .log-system { color: #888888; }
-.log-success { color: #00ff00; }
-.log-info { color: #ff3333; }
-.log-error { color: #ff0000; font-weight: bold; }
+.log-success { color: #00ff66; }
+.log-info { color: #ff3366; }
+.log-error { color: #ff003c; font-weight: bold; }
 
 /* Footer Status Bar */
 .footer-bar {
-    background: #0a0000;
+    background: #080002;
     border-top: var(--border-red);
     padding: 8px 16px;
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: #884444;
+    color: #884455;
 }
 
 .highlight {
